@@ -1,0 +1,28 @@
+[project]
+name = "pacman-bot"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Martin Vozník",email = "please-send-spam-here@ngw.cz"}
+]
+requires-python = ">=3.9,<3.13"
+
+dependencies = [
+    "inference (>=0.44.1,<0.45.0)",
+    "pydantic (>=2.10.6,<3.0.0)",
+    "keyboard (>=0.13.5,<0.14.0)"
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+
+[tool.poetry]
+package-mode = false
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+pylint = "^3.3.6"

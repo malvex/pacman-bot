@@ -1,0 +1,30 @@
+version: '3'
+
+tasks:
+  build:
+    desc: Install dependencies using poetry
+    aliases: [b]
+    cmds:
+      - poetry install --all-groups
+
+  test:
+    desc: Run pytest to execute tests
+    aliases: [t]
+    cmds:
+      - poetry run pytest -v
+
+  run:
+    desc: Run the bot
+    cmds:
+      - poetry run python3 src/main.py
+
+  lint:
+    desc: Run pylint to lint the code, including fancy colors
+    cmds:
+      - poetry run pylint src --output-format=colorized
+
+  help:
+    desc: Show this help
+    aliases: [h]
+    cmds:
+      - task --list

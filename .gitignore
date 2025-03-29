@@ -1,0 +1,6 @@
+__pycache__
+.pytest_cache
+.venv/
+src/config.py
+old/
+out.log
