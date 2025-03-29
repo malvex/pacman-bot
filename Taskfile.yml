@@ -3,7 +3,7 @@ version: '3'
 tasks:
   build:
     desc: Install dependencies using poetry
-    aliases: [b]
+    aliases: [b, install, i]
     cmds:
       - poetry install --all-groups
 

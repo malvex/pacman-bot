@@ -1,4 +1,4 @@
-screen_size = (20, 80)
+screen_size = (20, 40)
 
 
 def draw_map(game_state):
@@ -21,8 +21,8 @@ def draw_map(game_state):
         if not entity:
             continue
 
-        x = int(entity["x"] / 100)
-        y = int(entity["y"] / 100)
+        x = int(entity["x"] / 50)
+        y = int(entity["y"] / 50)
 
         entity_symbol = {
             "pacman": "P",
@@ -36,7 +36,7 @@ def draw_map(game_state):
         }.get(entity["class"], "?")
 
         try:
-            map[x][y] = entity_symbol
+            map[y][x] = entity_symbol
         except:
             pass
 
