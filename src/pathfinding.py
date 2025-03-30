@@ -1,14 +1,31 @@
 from helper import calculate_distance_better
+from models import Map, Entity, BotAction, BotActionType
+import logging
 
+l = logging.getLogger(__name__)
+
+
+def get_path_actions(map: Map, pacman: Entity, bot_action: BotAction):
+    if not pacman or not bot_action or bot_action == BotActionType.WANDER or not bot_action.target:
+        return False
+
+    l.debug("Trying to calculate path...")
+
+    p = pacman.scaled_xy(map.grid_resolution_px)
+    t = bot_action.target.scaled_xy(map.grid_resolution_px)
+
+    return find_path(map.data, p, t, step_size=25)
 
 def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: int = 1) -> list:
     """Simple "flowing water" path finding algorithm. Not the most efficient implementation."""
 
-    max_iter = 500
+    max_iter = 5000
 
     i = 0
     explored_points = []
     possible_paths = [[pacman_loc]]
+
+    print(possible_paths)
 
     while i < max_iter and possible_paths:
         i += 1
@@ -27,10 +44,10 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
 
         explored_points.append(loc)
 
-        go_left = (max(0, loc[0] - step_size), loc[1])
-        go_up = (loc[0], max(0, loc[1] - step_size))
-        go_right = max(0, loc[0] + step_size), loc[1]
-        go_down = (loc[0], max(0, loc[1] + step_size))
+        go_left = (max(0, loc[1] - step_size), loc[0])
+        go_up = (loc[1], max(0, loc[0] - step_size))
+        go_right = max(0, loc[1] + step_size), loc[0]
+        go_down = (loc[1], max(0, loc[0] + step_size))
 
         if array[go_left] > 0:
             # print(f"CAN GO LEFT, NEXT POINT IS {go_left}")
@@ -48,4 +65,9 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
             # print(f"CAN GO DOWN, NEXT POINT IS {go_down}")
             possible_paths.append(path + [go_down])
 
-        #print(f"[Iter {i}] Current possible_paths count list: {len(possible_paths)}")
+    if i >= max_iter:
+        l.warning("Maximum iterations allowance (%s) reached!", max_iter)
+    else:
+        l.info("Path to the target wasn't discovered yet. (made %s iterations)", i)
+
+    return False

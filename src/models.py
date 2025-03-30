@@ -55,6 +55,17 @@ class Entity(BaseModel):
     def xy(self):
         return (self.x, self.y)
 
+    def scaled_xy(self, resolution: int) -> tuple[int]:
+        """Helper method to return scaled xy coordinates (used almost everywhere)"""
+        return int(self.x // resolution), int(self.y // resolution)
+
+    def entity_bbox(self, max_size_px: int, resolution: int) -> tuple[int]:
+        """Returns entity bounding box"""
+        hs = int(max_size_px // resolution // 2) - 10
+        rx, ry = self.scaled_xy(resolution)
+
+        return (rx - hs, rx + hs), (ry - hs, ry + hs)
+
     @property
     def is_pacman(self) -> bool:
         """Returns True if the entity is the pacman."""

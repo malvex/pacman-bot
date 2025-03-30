@@ -1,6 +1,7 @@
 from my_keyboard import press_key
 from helper import calculate_closest_entity, direction_to
 from models import BotAction, BotActionType, Entity, EntityClass
+from pathfinding import get_path_actions
 from game_state import GameState
 
 from time import time
@@ -24,8 +25,10 @@ class Bot:
         self.blocked_actions = []
 
     def iterate(self) -> None:
+        game_state = self.game_state
+
         # if we dont see pacman then dont do anything (e.g. dead pacman, game in menu, or not loaded)
-        if not self.game_state.pacman:
+        if not game_state.pacman:
             return
 
         # check cooldown to prevent changing mind too often
@@ -35,8 +38,20 @@ class Bot:
 
         # todo - state machine
 
-        self.game_state.bot_action = self.choose_best_action(self.game_state)
-        self.execute_action(self.game_state.bot_action.action_key)
+        game_state.bot_action = self.choose_best_action(game_state)
+
+        pathfinding_actions = get_path_actions(game_state.walls_mapper.map, game_state.pacman, game_state.bot_action)
+
+        if pathfinding_actions:
+            if not game_state.bot_pathfinding:
+                l.info("Pathfinding successful!")
+                print(f"PATH: {str(pathfinding_actions)}")
+                game_state.bot_pathfinding = True
+
+            #self.execute_action(pathfinding_actions)
+            self.execute_action(game_state.bot_action.action_key)
+        else:
+            self.execute_action(game_state.bot_action.action_key)
 
     def choose_best_action(self, game_state: GameState) -> str:
         """decide the best action to take"""
@@ -44,8 +59,8 @@ class Bot:
         pacman = game_state.pacman
         closest_ghost = calculate_closest_entity(pacman, list(game_state.memory.ghosts.values()))
 
-        # powered up - chase ghosts
-        if game_state.powered_up:
+        # powered up - chase ghosts - but only if we have at least 2s left on the powerup timer
+        if game_state.powered_up and (game_state.power_up_end_time - time()) > 2:
             if closest_ghost:
                 return self.eat(pacman, closest_ghost)
 

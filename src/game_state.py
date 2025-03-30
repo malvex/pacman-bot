@@ -32,6 +32,7 @@ class GameState:
         self.last_debug_time = time()
         self.bot_action: BotAction = None
         self.bot_move: str = "-"
+        self.bot_pathfinding = False
 
         self.memory = Memory()
         self.stuck = 0
@@ -141,7 +142,7 @@ class GameState:
         """Check if pacman is stuck (not moving)."""
 
         dist = calculate_distance_better(self.pacman.xy, self.previous_pacman.xy)
-        l.info("Pacman distance travelled: %s", dist)
+        l.debug("Pacman distance travelled: %s", dist)
 
         if dist < 3:
             self.stuck += 1
