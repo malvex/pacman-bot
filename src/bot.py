@@ -1,7 +1,11 @@
-from time import time
 from my_keyboard import press_key
 from helper import calculate_distance, calculate_closest_entity, direction_to, direction_away_from
 from game_state import GameState
+
+from time import time
+from logging import getLogger
+
+l = getLogger(__name__)
 
 
 class Bot:
@@ -17,7 +21,6 @@ class Bot:
 
         # todo
         self.blocked_actions = []
-        self.memory = {}
 
     def iterate(self) -> None:
         # if we dont see pacman then dont do anything (e.g. dead pacman, game in menu, or not loaded)
@@ -70,10 +73,11 @@ class Bot:
         # execute the action
         if action != self.last_key or True:  # temp bypass
 
-            press_key(action)
-
-            if self.debug:
-                print(f"Move: {action}")
-
             self.last_key = action
             self.last_move_time = time()
+
+            if self.debug:
+                pass
+                #print(f"Would press {action} (debug mode on)")
+            else:
+                press_key(action)

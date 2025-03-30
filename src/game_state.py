@@ -1,13 +1,19 @@
 from helper import calculate_closest_entity, calculate_distance
-from map import draw_map
+from walls_mapper import WallsMapper
+from minimap import draw_map
 
 from time import time
+from logging import getLogger
+
+l = getLogger(__name__)
 
 POWER_UP_DURATION = 8  # seconds
 
 
 class GameState:
-    def __init__(self, debug: bool = True):
+    def __init__(self, walls_mapper: WallsMapper, debug: bool = True):
+        self.walls_mapper = walls_mapper
+
         # game entities
         self.pacman = None
         self.previous_pacman = None
@@ -23,6 +29,8 @@ class GameState:
         self.debug = debug
         self.frame = 0
         self.last_debug_time = time()
+
+        self.memory = {}
 
     def update(self, predictions: list) -> None:
         current_time = time()
@@ -42,6 +50,9 @@ class GameState:
         for entity in predictions:
             class_name = entity["class"]
 
+            if class_name == "pacman" or class_name.startswith("ghost-"):
+                self.walls_mapper.discover_pixel_size(entity["width"], entity["height"])
+                self.walls_mapper.discover_path(class_name, entity["x"], entity["y"])
             if class_name == "pacman":
                 self.pacman = entity
 
@@ -64,6 +75,8 @@ class GameState:
         # check if power-up has expired
         if self.powered_up and current_time > self.power_up_end_time:
             self.powered_up = False
+
+        draw_map(self, self.walls_mapper.map, self.walls_mapper.entity_max_size_px)
 
         if self.debug:
             # print debug info every second
@@ -91,5 +104,3 @@ class GameState:
         if self.pacman and closest_ghost:
             distance = calculate_distance(self.pacman, closest_ghost)
             print(f"Distance to closest ghost: {distance:.2f}")
-
-        draw_map(self)

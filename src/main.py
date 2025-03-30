@@ -1,15 +1,19 @@
 from inference import InferencePipeline
 
-from time import time
-
 from game_state import GameState
+from walls_mapper import WallsMapper
 from bot import Bot
 
 import config
 import logging
 
+
 # setup logging
-logging.basicConfig(filename="out.log", level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    filename="out.log",
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname).1s] <%(name)s> %(message)s',  # %(funcName)s
+    datefmt='%H:%M:%S')
 
 
 class InputDevice:  # not enum on purpose
@@ -18,6 +22,7 @@ class InputDevice:  # not enum on purpose
 
 # global components - fixme
 game_state = None
+walls_mapper = None
 bot = None
 
 
@@ -48,7 +53,8 @@ def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = 
 
 
 if __name__ == "__main__":
-    game_state = GameState(debug=config.DEBUG)
+    walls_mapper = WallsMapper()
+    game_state = GameState(walls_mapper, debug=config.DEBUG)
     bot = Bot(game_state, debug=config.DEBUG)
 
     logging.info("Starting...")
