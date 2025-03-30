@@ -56,11 +56,11 @@ class GameState:
             if class_name == "pacman":
                 self.pacman = entity
 
-            elif class_name.startswith("ghost-"):
+            elif class_name.startswith("ghost-") or class_name == "vulnerable-ghost":
                 self.ghosts[class_name] = entity
 
                 # if we see vulnerable ghost that means power-up was taken
-                if not self.powered_up and class_name == "ghost-vulnerable":
+                if not self.powered_up and class_name == "vulnerable-ghost":
                     self.activate_power_up()
 
             elif class_name == "berry":

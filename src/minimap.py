@@ -51,7 +51,7 @@ def draw_map(game_state, map: Map, entity_max_size_px: int):
             "ghost-green": COLOR["RED"],
             "ghost-orange": COLOR["RED"],
             "ghost-yellow": COLOR["RED"],
-            "ghost-vulnerable": COLOR["BLUE"],
+            "vulnerable-ghost": COLOR["BLUE"],
             "berry": COLOR["BLUE"],
             "buff": COLOR["BLUE"]
         }.get(entity["class"])
