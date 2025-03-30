@@ -5,8 +5,8 @@ This component maps the environment based on Pacman getting stuck against the wa
 and watching path that ghosts take.
 I could just OCR walls, but this seems like a fun idea to implement.
 """
-from helper import calculate_distance
-from models import Map
+from helper import calculate_distance_better
+from models import Map, Entity
 
 from logging import getLogger
 
@@ -24,25 +24,14 @@ class WallsMapper:
 
         self.min_distance_px = self.map.grid_resolution_px
 
-    def discover_pixel_size(self, width: float, height: float) -> None:
+    def discover_pixel_size(self, size: int) -> None:
         """determine the path size in pixels based on entity size"""
 
-        changed = False
-
-        if width > self.entity_max_size_px:
-            self.entity_max_size_px = width
-            changed = True
-
-        if height > self.entity_max_size_px:
-            self.entity_max_size_px = height
-            changed = True
-
-        # re-render path if we have change in size
-        if changed:
+        if size > self.entity_max_size_px:
+            self.entity_max_size_px = size
             l.info("Entity Max pixel size increased to %s", self.entity_max_size_px)
-            pass
 
-    def discover_path(self, entity_id: str, x: float, y: float):
+    def discover_path(self, entity: Entity) -> None:
         """Entities exploring the map will reveal the available paths"""
 
         # if entity_id != "pacman":
@@ -51,22 +40,23 @@ class WallsMapper:
         if self.entity_max_size_px <= 0:
             return
 
-        loc = {"x": x, "y": y}  # temporary
+        recent_loc = self.recent_location.get(entity.entity_id, None)
 
         # store point only if entity moved more than min_distance_px (5px) to prevent storing too often
-        if entity_id not in self.recent_location or calculate_distance(self.recent_location[entity_id], loc) > self.min_distance_px:
-            self.recent_location[entity_id] = loc
+        if not recent_loc or calculate_distance_better(entity.xy, recent_loc) > self.min_distance_px:
+            self.recent_location[entity.entity_id] = entity.xy
 
             grid_resolution_px = self.map.grid_resolution_px
 
             # resized coordinates
-            rx = int(x // grid_resolution_px)
-            ry = int(y // grid_resolution_px)
+            rx = int(entity.x // grid_resolution_px)
+            ry = int(entity.y // grid_resolution_px)
 
             # half size to get bounding box
             hs = int(self.entity_max_size_px // grid_resolution_px // 2) - self.bounding_box_tolerance_px
             entity_bbox_rx = (rx - hs, rx + hs)
             entity_bbox_ry = (ry - hs, ry + hs)
 
+            # value 1 means there is a path
             self.map.data[entity_bbox_ry[0]:entity_bbox_ry[1],entity_bbox_rx[0]:entity_bbox_rx[1]] = 1
             #l.info("Discovered path point (%s, %s) by %s - in pixels: (%s, %s)", rx, ry, entity_id, x, y)

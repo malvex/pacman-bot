@@ -1,8 +1,9 @@
+from pathfinding import find_path
+from models import Map
+
 import pytest
 
-from pathfinding import find_path
 
-from models import Map
 
 @pytest.fixture
 def small_map():

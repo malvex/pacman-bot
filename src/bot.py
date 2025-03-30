@@ -1,5 +1,6 @@
 from my_keyboard import press_key
-from helper import calculate_distance, calculate_closest_entity, direction_to, direction_away_from
+from helper import calculate_closest_entity, direction_to
+from models import BotAction, BotActionType, Entity, EntityClass
 from game_state import GameState
 
 from time import time
@@ -34,8 +35,8 @@ class Bot:
 
         # todo - state machine
 
-        action = self.choose_best_action(self.game_state)
-        self.execute_action(action)
+        self.game_state.bot_action = self.choose_best_action(self.game_state)
+        self.execute_action(self.game_state.bot_action.action_key)
 
     def choose_best_action(self, game_state: GameState) -> str:
         """decide the best action to take"""
@@ -46,34 +47,23 @@ class Bot:
         # powered up - chase ghosts
         if game_state.powered_up:
             if closest_ghost:
-                direction = direction_to(pacman, closest_ghost)
-                self.game_state.bot_action = "eat-ghost"
-                return direction
+                return self.eat(pacman, closest_ghost)
 
         # avoid nearby ghosts
-        if closest_ghost and calculate_distance(pacman, closest_ghost) < 200:
-            direction = direction_away_from(pacman, closest_ghost)
-            self.game_state.bot_action = "run-away"
-            return direction
+        if closest_ghost and pacman.distance_to(closest_ghost) < 200:
+            return self.run_away_from(pacman, closest_ghost)
 
         # go for power-up buff
-        closest_buff = calculate_closest_entity(pacman, list(game_state.memory.power_ups.values()))
-        if closest_buff:
-            direction = direction_to(pacman, closest_buff)
-            self.game_state.bot_action = "eat-powerup"
-            return direction
+        closest_powerup = calculate_closest_entity(pacman, list(game_state.memory.power_ups.values()))
+        if closest_powerup:
+            return self.eat(pacman, closest_powerup)
 
         # go for berry
         closest_berry = calculate_closest_entity(pacman, game_state.berries)
         if closest_berry:
-            direction = direction_to(pacman, closest_berry)
-            self.game_state.bot_action = "eat-berry"
-            return direction
+            return self.eat(pacman, closest_berry)
 
-        # default action - if nothing goes right, go left :)
-        self.game_state.bot_action = "undecided"
-
-        return self.last_key or "left", "up", "down"
+        return self.wander()
 
     def execute_action(self, action: tuple[str]) -> None:
         # execute the action
@@ -101,3 +91,45 @@ class Bot:
             #     #print(f"Would press {action} (debug mode on)")
             # else:
             press_key(action)
+
+    ###########
+    # helper functions to simplify the code
+    ###########
+
+    @staticmethod
+    def run_away_from(pacman: Entity, target: Entity):
+        """Helper function that sets up run away bot action"""
+        return BotAction(
+            target=target,
+            action_key=pacman.direction_away_from(target),
+            action_type=BotActionType.RUN_AWAY
+        )
+
+    @staticmethod
+    def eat(pacman: Entity, target: Entity):
+        """Helper function that sets up eat bot action"""
+
+        if target.is_ghost:
+            action_type = BotActionType.EAT_GHOST
+        elif target.class_name == EntityClass.buff:
+            action_type = BotActionType.EAT_POWERUP
+        elif target.class_name == EntityClass.berry:
+            action_type = BotActionType.EAT_BERRY
+        else:
+            l.warning("Undefined eat handler for %s", target.class_name)
+            action_type = None
+
+        return BotAction(
+            target=target,
+            action_key=pacman.direction_to(target),
+            action_type=action_type
+        )
+
+    @staticmethod
+    def wander():
+        """Helper function that sets up default wandering action (no clear goal defined)"""
+        return BotAction(
+            action_type=BotActionType.WANDER,
+            target=None,
+            action_key=("left", "up", "down")  # default directions
+        )
