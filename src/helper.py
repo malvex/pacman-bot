@@ -8,6 +8,9 @@ def calculate_distance(e1, e2):
         print(e1, e2)
         raise e
 
+def calculate_distance_better(x: tuple, y: tuple):
+    return ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2) ** 0.5
+
 
 def calculate_closest_entity(pacman, entity_list: list):
     if not pacman or not entity_list:
