@@ -1,7 +1,7 @@
 from my_keyboard import press_key
 from helper import calculate_closest_entity, direction_to
-from models import BotAction, BotActionType, Entity, EntityClass
-from pathfinding import get_path_actions
+from models import BotAction, BotActionType, Entity, EntityClass, NavigationStep
+from pathfinding import get_path_actions, generate_path_navigation
 from game_state import GameState
 
 from time import time
@@ -21,8 +21,9 @@ class Bot:
         self.last_move_time = 0
         self.move_cooldown = 0.1  # seconds between key changes
 
-        # todo
-        self.blocked_actions = []
+        self.current_action: BotAction = None
+        self.current_navigation: list[NavigationStep] = []
+        self.next_action_time: float = 0.0
 
     def iterate(self) -> None:
         game_state = self.game_state
@@ -33,6 +34,10 @@ class Bot:
 
         # check cooldown to prevent changing mind too often
         current_time = time()
+
+        # if current_time > self.next_action_time:
+        #     self.next_action_time = current_time + 0.1
+
         if current_time - self.last_move_time < self.move_cooldown:
             return
 
@@ -40,17 +45,41 @@ class Bot:
 
         game_state.bot_action = self.choose_best_action(game_state)
 
-        pathfinding_actions = get_path_actions(game_state.walls_mapper.map, game_state.pacman, game_state.bot_action)
+        # if we should run away then interrupt everything we are doing
+        if game_state.bot_action.action_type != BotActionType.RUN_AWAY:
+            # we have currently set navigation
+            while self.current_navigation:
+                next_point = self.current_navigation[0].model_copy()
+                next_point.x = int(next_point.x * 2)
+                next_point.y = int(next_point.y * 2)
 
-        if pathfinding_actions:
+                l.info(f"pacman = {game_state.pacman.xy} next_point = {next_point.xy}")
+                if game_state.pacman.distance_to(next_point) < 250:
+                    l.info(f"point ({str(next_point)}) reached! pacman = {game_state.pacman.xy}")
+                    self.current_navigation.pop(0)
+                    continue
+                else:
+                    return self.execute_action((next_point.direction,)*3)
+
+        self.current_navigation = []
+
+        found_path = get_path_actions(game_state.walls_mapper.map, game_state.pacman, game_state.bot_action)
+
+        if found_path:
             if not game_state.bot_pathfinding:
                 l.info("Pathfinding successful!")
-                print(f"PATH: {str(pathfinding_actions)}")
                 game_state.bot_pathfinding = True
+
+            navigation_steps = generate_path_navigation(game_state.pacman.scaled_xy(game_state.walls_mapper.map.grid_resolution_px), found_path)
+            #print(f"PATH: {str(found_path)}")
+            print(f"NAVIGATION: {[str(step) for step in navigation_steps]}")
+            self.game_state.bot_navigation = navigation_steps
+            self.current_navigation = navigation_steps
 
             #self.execute_action(pathfinding_actions)
             self.execute_action(game_state.bot_action.action_key)
         else:
+            self.game_state.bot_navigation = []
             self.execute_action(game_state.bot_action.action_key)
 
     def choose_best_action(self, game_state: GameState) -> str:
@@ -84,6 +113,10 @@ class Bot:
         # execute the action
 
         stuck_counter = self.game_state.stuck
+
+        if stuck_counter > 3 and self.current_navigation:
+            self.current_navigation = []
+            return
 
         primary, secondary, tertiary = action
 

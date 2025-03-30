@@ -126,3 +126,17 @@ class BotAction(BaseModel):
     action_type: BotActionType
     action_key: tuple  # Literal["up", "down", "left", "right"]
     target: Entity|None = None  # entity that we go to
+
+
+class NavigationStep(BaseModel):
+    x: int
+    y: int
+    direction: Literal["up", "down", "left", "right"]
+
+    @property
+    def xy(self):
+        return self.x, self.y
+
+    def __str__(self):
+        """Print easier to read string"""
+        return f"{self.direction} until ({self.xy})"

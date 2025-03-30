@@ -1,4 +1,4 @@
-from models import Map, Entity, BotAction, BotActionType
+from models import Map, Entity, BotAction, BotActionType, NavigationStep
 
 import cv2
 import numpy as np
@@ -10,6 +10,7 @@ COLOR = {
     "GREEN": (0, 255, 0),
     "RED": (0, 0, 255),
     "BLUE": (255, 0, 0),
+    "ORANGE": (0, 120, 255),
 }
 
 cv2.namedWindow('Map', cv2.WINDOW_NORMAL)
@@ -29,6 +30,26 @@ def draw_bot_action_line(img, resolution: int, pacman: Entity, bot_action: BotAc
     color = "RED" if bot_action.action_type == BotActionType.RUN_AWAY else "BLUE"
 
     return cv2.line(img, pacman_loc, target_loc, COLOR[color], 3)
+
+
+def draw_pathfinding_navigation(img, pacman: Entity, resolution: int, steps: list[NavigationStep]):
+    """Draw navigation path found by pathfinding"""
+
+    previous_point = pacman.scaled_xy(resolution)
+
+    img[previous_point[1]-10:previous_point[1]+10,previous_point[0]-10:previous_point[0]+10] = COLOR["ORANGE"]
+
+    for step in steps:
+        #next_point = int(step.x // resolution), int(step.y // resolution)
+        next_point = step.xy
+        #next_point = int(step.x * resolution), int(step.y * resolution)
+
+        img[next_point[1]-10:next_point[1]+10,next_point[0]-10:next_point[0]+10] = COLOR["ORANGE"]
+
+        cv2.line(img, previous_point, next_point, COLOR["GREEN"], 3)
+        previous_point = next_point
+
+    return img
 
 
 def draw_map(game_state, map: Map, entity_max_size_px: int, bot_action: BotAction):
@@ -78,14 +99,9 @@ def draw_map(game_state, map: Map, entity_max_size_px: int, bot_action: BotActio
     # draw line to the current target
     frame = draw_bot_action_line(frame, resolution, game_state.pacman, bot_action)
 
-    # # draw pathfinding line
-    # prev_point = None
-    # for point in game_state.pathfinding:
-    #     if not prev_point:
-    #         prev_point = point
-    #         continue
-
-    #     draw_line(frame, prev_point, point, "")
+    # draw pathfinding directions
+    if game_state.bot_navigation:
+        draw_pathfinding_navigation(frame, game_state.pacman, resolution, game_state.bot_navigation)
 
     resized_frame = cv2.resize(frame, (map.width * resolution, map.height * resolution),
                        interpolation=cv2.INTER_NEAREST)

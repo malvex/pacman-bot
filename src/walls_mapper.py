@@ -18,7 +18,8 @@ class WallsMapper:
         self.map = Map()
 
         self.recent_location = {}
-        self.entity_max_size_px = 0
+        #self.entity_max_size_px = 0
+        self.entity_max_size_px = 75  # temp
 
         self.bounding_box_tolerance_px = 5
 
@@ -26,6 +27,7 @@ class WallsMapper:
 
     def discover_pixel_size(self, size: int) -> None:
         """determine the path size in pixels based on entity size"""
+        return  # temp
 
         if size > self.entity_max_size_px:
             self.entity_max_size_px = size

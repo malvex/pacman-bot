@@ -1,6 +1,6 @@
 from helper import calculate_closest_entity, calculate_distance_better
 from walls_mapper import WallsMapper
-from models import Memory, Prediction, Entity, EntityClass, BotAction
+from models import Memory, Prediction, Entity, EntityClass, BotAction, NavigationStep
 from minimap import draw_map
 
 from time import time
@@ -33,6 +33,7 @@ class GameState:
         self.bot_action: BotAction = None
         self.bot_move: str = "-"
         self.bot_pathfinding = False
+        self.bot_navigation: list[NavigationStep] = []
 
         self.memory = Memory()
         self.stuck = 0
@@ -136,7 +137,7 @@ class GameState:
         self.powered_up = True
         self.power_up_end_time = time() + POWER_UP_DURATION
         if self.debug:
-            print(f"Power-up activated!\n")
+            l.info(f"Power-up activated!\n")
 
     def check_if_stuck(self) -> int:
         """Check if pacman is stuck (not moving)."""
