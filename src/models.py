@@ -9,3 +9,12 @@ class Map:
 
         # Initialize 2D grid for discovered paths
         self.data = np.zeros((self.height, self.width), dtype=np.uint8)
+
+class Memory:
+    power_ups = {}
+    ghosts = {}
+
+    # @property
+    # def ghosts(self):
+    #     ghosts = [self.ghost_red, self.ghost_yellow, self.ghost_green, self.ghost_orange]
+    #     return [g for g in ghosts if g is not None]

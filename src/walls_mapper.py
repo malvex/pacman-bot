@@ -20,6 +20,7 @@ class WallsMapper:
         self.recent_location = {}
         self.entity_max_size_px = 0
 
+        self.bounding_box_tolerance_px = 5
 
         self.min_distance_px = self.map.grid_resolution_px
 
@@ -63,7 +64,7 @@ class WallsMapper:
             ry = int(y // grid_resolution_px)
 
             # half size to get bounding box
-            hs = int(self.entity_max_size_px // grid_resolution_px // 2)
+            hs = int(self.entity_max_size_px // grid_resolution_px // 2) - self.bounding_box_tolerance_px
             entity_bbox_rx = (rx - hs, rx + hs)
             entity_bbox_ry = (ry - hs, ry + hs)
 

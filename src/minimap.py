@@ -26,9 +26,9 @@ def draw_map(game_state, map: Map, entity_max_size_px: int):
 
     entities = [] \
         + [game_state.pacman] \
-        + (list(game_state.ghosts.values())) \
+        + (list(game_state.memory.ghosts.values())) \
         + (game_state.berries or []) \
-        + (game_state.buffs or [])
+        + (list(game_state.memory.power_ups.values()))
 
     # draw entities
     for entity in entities:
@@ -40,7 +40,7 @@ def draw_map(game_state, map: Map, entity_max_size_px: int):
         ry = int(entity["y"] // resolution)
 
         # half size to get bounding box
-        hs = int(entity_max_size_px // resolution // 2)
+        hs = int(entity_max_size_px // resolution // 2) - 10
         entity_bbox_rx = (rx - hs, rx + hs)
         entity_bbox_ry = (ry - hs, ry + hs)
 
@@ -59,8 +59,15 @@ def draw_map(game_state, map: Map, entity_max_size_px: int):
         # draw box where entity is found
         frame[entity_bbox_ry[0]:entity_bbox_ry[1],entity_bbox_rx[0]:entity_bbox_rx[1]] = color
 
+    if game_state.pacman and "ghost-red" in game_state.memory.ghosts:
+        pacman_loc = (int(game_state.pacman["x"] // resolution), int(game_state.pacman["y"] // resolution))
+        ghost_loc = (int(game_state.memory.ghosts["ghost-red"]["x"] // resolution), int(game_state.memory.ghosts["ghost-red"]["y"] // resolution))
+        #print(pacman_loc, ghost_loc)
+        frame = cv2.line(frame, pacman_loc, ghost_loc, COLOR["RED"], 2)
+
     resized_frame = cv2.resize(frame, (map.width * resolution, map.height * resolution),
                        interpolation=cv2.INTER_NEAREST)
+
 
     # render the final image
     cv2.imshow('Map', resized_frame)

@@ -41,43 +41,63 @@ class Bot:
         """decide the best action to take"""
 
         pacman = game_state.pacman
-        closest_ghost = calculate_closest_entity(pacman, list(game_state.ghosts.values()))
+        closest_ghost = calculate_closest_entity(pacman, list(game_state.memory.ghosts.values()))
 
         # powered up - chase ghosts
         if game_state.powered_up:
             if closest_ghost:
                 direction = direction_to(pacman, closest_ghost)
+                self.game_state.bot_action = "eat-ghost"
                 return direction
 
         # avoid nearby ghosts
-        if closest_ghost and calculate_distance(pacman, closest_ghost) < 100:
+        if closest_ghost and calculate_distance(pacman, closest_ghost) < 200:
             direction = direction_away_from(pacman, closest_ghost)
+            self.game_state.bot_action = "run-away"
             return direction
 
         # go for power-up buff
-        closest_buff = calculate_closest_entity(pacman, game_state.buffs)
+        closest_buff = calculate_closest_entity(pacman, list(game_state.memory.power_ups.values()))
         if closest_buff:
             direction = direction_to(pacman, closest_buff)
+            self.game_state.bot_action = "eat-powerup"
             return direction
 
         # go for berry
         closest_berry = calculate_closest_entity(pacman, game_state.berries)
         if closest_berry:
             direction = direction_to(pacman, closest_berry)
+            self.game_state.bot_action = "eat-berry"
             return direction
 
         # default action - if nothing goes right, go left :)
-        return self.last_key or "left"
+        self.game_state.bot_action = "undecided"
 
-    def execute_action(self, action: str) -> None:
+        return self.last_key or "left", "up", "down"
+
+    def execute_action(self, action: tuple[str]) -> None:
         # execute the action
+
+        stuck_counter = self.game_state.stuck
+
+        primary, secondary, tertiary = action
+
+        if stuck_counter == 0:
+            action = primary
+        elif stuck_counter < 2:
+            action = secondary
+        else:
+            action = tertiary
+
+        self.game_state.bot_move = action
+
         if action != self.last_key or True:  # temp bypass
 
             self.last_key = action
             self.last_move_time = time()
 
-            if self.debug:
-                pass
-                #print(f"Would press {action} (debug mode on)")
-            else:
-                press_key(action)
+            # if self.debug:
+            #     pass
+            #     #print(f"Would press {action} (debug mode on)")
+            # else:
+            press_key(action)

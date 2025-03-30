@@ -1,5 +1,6 @@
 from helper import calculate_closest_entity, calculate_distance
 from walls_mapper import WallsMapper
+from models import Memory
 from minimap import draw_map
 
 from time import time
@@ -7,7 +8,7 @@ from logging import getLogger
 
 l = getLogger(__name__)
 
-POWER_UP_DURATION = 8  # seconds
+POWER_UP_DURATION = 7  # seconds
 
 
 class GameState:
@@ -29,15 +30,15 @@ class GameState:
         self.debug = debug
         self.frame = 0
         self.last_debug_time = time()
+        self.bot_action = "-"
+        self.bot_move = "-"
 
-        self.memory = {}
+        self.memory = Memory()
+        self.stuck = 0
 
     def update(self, predictions: list) -> None:
         current_time = time()
         self.frame += 1
-
-        # save previous pacman position
-        self.previous_pacman = self.pacman
 
         # todo - implement memory!
 
@@ -53,21 +54,35 @@ class GameState:
             if class_name == "pacman" or class_name.startswith("ghost-"):
                 self.walls_mapper.discover_pixel_size(entity["width"], entity["height"])
                 self.walls_mapper.discover_path(class_name, entity["x"], entity["y"])
+
             if class_name == "pacman":
+                # save previous pacman position
+                self.previous_pacman = self.pacman
+
                 self.pacman = entity
+
+                if self.pacman and self.previous_pacman:
+                    self.check_if_stuck()
 
             elif class_name.startswith("ghost-") or class_name == "vulnerable-ghost":
                 self.ghosts[class_name] = entity
 
+                self.memory.ghosts[class_name] = entity
+
                 # if we see vulnerable ghost that means power-up was taken
                 if not self.powered_up and class_name == "vulnerable-ghost":
                     self.activate_power_up()
+                    self.memory.power_ups = {}  # forget all power_ups to reset it
+                    self.memory.ghosts = {}
 
             elif class_name == "berry":
                 self.berries.append(entity)
 
             elif class_name == "buff":
                 self.buffs.append(entity)
+                key = (entity["x"] // 10, entity["y"] // 10)
+                if key not in self.memory.power_ups:
+                    self.memory.power_ups[key] = entity
 
             # if self.pacman and self.calculate_distance(self.pacman, entity) < 20:
             #     self.activate_power_up()
@@ -78,7 +93,13 @@ class GameState:
 
         draw_map(self, self.walls_mapper.map, self.walls_mapper.entity_max_size_px)
 
-        if self.debug:
+        power_timer = f" Power up! ({ self.power_up_end_time - time():.2f})" if self.powered_up else ""
+
+        print(f"P/G/P/B: {self.pacman is not None}/{len(self.ghosts)}/{len(self.buffs)}/{len(self.berries)}"
+            + f" | Stuck: {self.stuck} | {self.bot_action} ({self.bot_move}) {power_timer}"
+            + " " * 20, end="\r")
+
+        if self.debug and False:
             # print debug info every second
             if current_time - self.last_debug_time >= 1:
                 self.print_debug_info()
@@ -88,7 +109,19 @@ class GameState:
         self.powered_up = True
         self.power_up_end_time = time() + POWER_UP_DURATION
         if self.debug:
-            print(f"Power-up activated!")
+            print(f"Power-up activated!\n")
+
+    def check_if_stuck(self):
+        """Check if pacman is stuck (not moving)."""
+
+        dist = calculate_distance(self.pacman, self.previous_pacman)
+        l.info("Pacman distance travelled: %s", dist)
+        if dist < 3:
+            self.stuck += 1
+        else:
+            self.stuck = 0
+
+        return self.stuck
 
     def print_debug_info(self):
         print(f"\n--- Frame {self.frame} ---")
@@ -97,6 +130,7 @@ class GameState:
         print(f"Berries detected: {len(self.berries)}")
         print(f"Buffs detected: {len(self.buffs)}")
         print(f"Powered up: {self.powered_up}")
+        print(f"Stuck: {self.stuck}")
 
         # calculate closest ghost
         closest_ghost = calculate_closest_entity(self.pacman, list(self.ghosts.values()))

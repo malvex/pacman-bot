@@ -23,9 +23,15 @@ def direction_to(pacman, target):
     dy = target["y"] - pacman["y"]
 
     if abs(dx) > abs(dy):
-        return "right" if dx > 0 else "left"
+        primary = "right" if dx > 0 else "left"
+        secondary = "down" if dy > 0 else "up"
+        tertiary = "up" if dy > 0 else "down"
     else:
-        return "down" if dy > 0 else "up"
+        primary = "down" if dy > 0 else "up"
+        secondary = "right" if dx > 0 else "left"
+        tertiary = "left" if dx > 0 else "right"
+
+    return primary, secondary, tertiary
 
 
 def direction_away_from(pacman, target):
@@ -33,6 +39,12 @@ def direction_away_from(pacman, target):
     dy = pacman["y"] - target["y"]
 
     if abs(dx) > abs(dy):
-        return "right" if dx > 0 else "left"
+        primary = "right" if dx > 0 else "left"
+        secondary = "down" if dy > 0 else "up"
+        tertiary = "up" if dy > 0 else "down"
     else:
-        return "down" if dy > 0 else "up"
+        primary = "down" if dy > 0 else "up"
+        secondary = "right" if dx > 0 else "left"
+        tertiary = "left" if dx > 0 else "right"
+
+    return primary, secondary, tertiary
