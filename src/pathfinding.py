@@ -24,9 +24,10 @@ def get_path_actions(map: Map, pacman: Entity, bot_action: BotAction):
 
 def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: int = 1) -> list:
     """
-    Simple "flowing water" path finding algorithm. Not the most efficient implementation.
-    Could be optimized by preferring checking paths in the right direction to the target.
+    Simple "flowing water" path finding algorithm.
     """
+    # get array dimensions
+    array_height, array_width = array.shape
 
     # flip xy coordinates because numpy uses height/width (= y/x)
     pacman_loc = (pacman_loc[1], pacman_loc[0])
@@ -35,13 +36,14 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
     max_iter = 500
 
     i = 0
-    explored_points = []
+    explored_points = set()
     possible_paths = [[pacman_loc]]
-    shortest_path_found = False
 
     while i < max_iter and possible_paths:
         i += 1
 
+        # sort paths by distance to search paths closer to the target first
+        possible_paths.sort(key=lambda p: calculate_distance(p[-1], target_loc))
         path = possible_paths.pop(0)
 
         loc = path[-1]  # get last path point
@@ -50,7 +52,7 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
         if calculate_distance(loc, target_loc) < step_size:
             l.debug(f"FOUND, BUT {len(possible_paths)} PATHS LEFT TO CHECK")
             path.pop(0)  # remove point of origin (already reached point)
-            #path.append(target_loc)  # append target point
+            path.append(target_loc)  # append target point
             # flip xy on each step again
             return [(p[1], p[0]) for p in path]
 
@@ -58,28 +60,24 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
         if loc in explored_points:
             continue
 
-        explored_points.append(loc)
+        explored_points.add(loc)
 
-        go_left = (max(0, loc[0] - step_size), loc[1])
-        go_up = (loc[0], max(0, loc[1] - step_size))
-        go_right = max(0, loc[0] + step_size), loc[1]
-        go_down = (loc[0], max(0, loc[1] + step_size))
+        # min() and max() are used for bounds checking
+        directions = [
+            (max(0, min(array_height-1, loc[0] - step_size)), loc[1]),  # go left
+            (loc[0], max(0, min(array_width-1, loc[1] - step_size))),   # go up
+            (max(0, min(array_height-1, loc[0] + step_size)), loc[1]),  # go right
+            (loc[0], max(0, min(array_width-1, loc[1] + step_size))),   # go down
+        ]
 
-        if array[go_left] > 0:
-            # print(f"CAN GO LEFT, NEXT POINT IS {go_left}")
-            possible_paths.append(path + [go_left])
+        for next_loc in directions:
+            # skip if we havent moved - can happen when we reached boundary
+            if next_loc == loc:
+                continue
 
-        if array[go_up] > 0:
-            # print(f"CAN GO UP, NEXT POINT IS {go_up}")
-            possible_paths.append(path + [go_up])
-
-        if array[go_right] > 0:
-            # print(f"CAN GO RIGHT, NEXT POINT IS {go_right}")
-            possible_paths.append(path + [go_right])
-
-        if array[go_down] > 0:
-            # print(f"CAN GO DOWN, NEXT POINT IS {go_down}")
-            possible_paths.append(path + [go_down])
+            # check if the next point is a path (1) or a wall (0)
+            if array[next_loc] > 0:
+                possible_paths.append(path + [next_loc])
 
     if i >= max_iter:
         l.warning("Maximum iterations allowance (%s) reached!", max_iter)
@@ -88,17 +86,16 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
 
     return False
 
-def generate_path_navigation(origin: list[tuple[int]], path: list[tuple[int]]):
+def generate_path_navigation(origin: tuple[int], path: list[tuple[int]]) -> list[NavigationStep]:
+    """Generate navigation steps from a path"""
     if not path:
-        return False
+        return []
 
     previous_point = origin
     previous_direction = None
     steps = []
 
-    while path:
-        next_point = path.pop(0)
-
+    for next_point in path:
         # get the direction to the next point
         next_direction = direction_to(previous_point, next_point)[0]
 
@@ -110,5 +107,7 @@ def generate_path_navigation(origin: list[tuple[int]], path: list[tuple[int]]):
                 direction=next_direction
             ))
             previous_direction = next_direction
+
+        previous_point = next_point
 
     return steps

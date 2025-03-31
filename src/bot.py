@@ -23,6 +23,7 @@ class Bot:
         self.last_pressed_key = None
         self.last_move_time = 0
         self.move_cooldown = 0.1  # seconds between key changes
+        self.last_pathfinding_time: float = 0.0
 
     def iterate(self, game_state: GameState) -> None:
         """
@@ -73,7 +74,7 @@ class Bot:
                 next_point.x = int(next_point.x * 2)
                 next_point.y = int(next_point.y * 2)
 
-                if game_state.pacman.distance_to(next_point) < 250:
+                if game_state.pacman.distance_to(next_point) < 100:
                     l.info(f"point ({str(next_point)}) reached! pacman = {game_state.pacman.xy}")
                     self.current_navigation.pop(0)
                     continue
@@ -83,9 +84,14 @@ class Bot:
 
         if self.current_action.action_type != BotActionType.RUN_AWAY \
             and self.enable_navigation \
+            and current_time > self.last_pathfinding_time + 1.0 \
             and self.current_action.target \
             and game_state.pacman.distance_to(self.current_action.target) > 250:
             # no navigation yet, lets try pathfinding, but only if we arent chased
+
+            # pathfinding cooldown to reduce system load
+            self.last_pathfinding_time = current_time
+
             found_path = get_path_actions(game_state.walls_mapper.map, game_state.pacman, self.current_action)
 
             if found_path:
@@ -93,6 +99,7 @@ class Bot:
 
                 pxy = game_state.pacman.scaled_xy(game_state.walls_mapper.map.grid_resolution_px)
                 self.current_navigation = generate_path_navigation(pxy, found_path)
+                l.info(f"Navigation: {[str(s) for s in self.current_navigation]}")
 
                 reason = f"{self.current_action.action_type.name} (new navigation)"
                 return self.execute_action(self.current_navigation[0].direction, reason)

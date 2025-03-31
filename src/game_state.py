@@ -1,6 +1,6 @@
-from helper import calculate_closest_entity, calculate_distance
+from helper import calculate_distance
 from walls_mapper import WallsMapper
-from models import Memory, Prediction, Entity, EntityClass, BotAction, NavigationStep
+from models import Memory, Prediction, Entity, EntityClass
 from minimap import draw_map
 
 from time import time
@@ -85,19 +85,20 @@ class GameState:
             elif entity.is_ghost:
                 self.ghosts[entity.entity_id] = entity
 
-                # if we are too close to a vulnerable ghost, clean it up from memory (was eaten)
-                if self.previous_pacman and self.previous_pacman.distance_to(entity) < 100 and entity_id.startswith("vuln"):
-                    for _ghost_id in list(self.memory.ghosts.keys()):
-                        if _ghost_id.startswith("vulner"):
-                            self.memory.ghosts.pop(_ghost_id)
-                else:
-                    self.memory.ghosts[entity.entity_id] = entity
+                if self.previous_pacman and entity.class_name == EntityClass.vulnerable_ghost:
+                    # if pacman is too close to a vulnerable ghost we assume it was eaten
+                    if self.previous_pacman.distance_to(entity) < 50:
+                        l.info(f"Pacman ate vulnerable ghost at {entity.xy}")
+                        # remove cache of all vulnerable ghosts
+                        self.memory.clear_vulnerable_ghosts()
+                    else:
+                        self.memory.ghosts[entity.entity_id] = entity
 
                 # if we see vulnerable ghost that means power-up was taken
                 if not self.powered_up and entity.class_name == EntityClass.vulnerable_ghost:
                     self.activate_power_up()
-                    self.memory.power_ups = {}  # forget all power_ups to reset it
-                    self.memory.ghosts = {}
+                    # clear memory so pacman isn't scared of "cached" ghosts or going for cached power-up
+                    self.memory.clear_memory()
 
             # handle berry logic
             elif entity.class_name == EntityClass.berry:
@@ -117,13 +118,13 @@ class GameState:
         # check if power-up has expired
         if self.powered_up and current_time > self.power_up_end_time:
             self.powered_up = False
-            self.memory.ghosts = {}
+            self.memory.clear_vulnerable_ghosts()
 
     def activate_power_up(self) -> None:
         self.powered_up = True
         self.power_up_end_time = time() + POWER_UP_DURATION
         if self.debug:
-            l.info(f"Power-up activated!\n")
+            l.info(f"Power-up activated!")
 
     def check_if_stuck(self) -> int:
         """Check if pacman is stuck (not moving)."""

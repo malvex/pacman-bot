@@ -58,7 +58,7 @@ def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = 
         workspace_name=workspace_name,
         workflow_id=workflow_id,
         video_reference=device_id,
-        max_fps=30,
+        max_fps=5,
         on_prediction=my_sink,
         serialize_results=True
     )

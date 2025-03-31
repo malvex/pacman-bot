@@ -104,9 +104,21 @@ class Entity(BaseModel):
         return direction_to(target.xy, self.xy)
 
 
-class Memory():
+class Memory:
     power_ups = {}
     ghosts = {}
+
+    def clear_memory(self):
+        print("Clearing up all memory...")
+        self.power_ups = {}
+        self.ghosts = {}
+
+    def clear_vulnerable_ghosts(self):
+        print("Clearing vulnerable ghosts...")
+        for entity_id, entity in self.ghosts.copy().items():
+            if entity.class_name == EntityClass.vulnerable_ghost:
+                print(f"{entity_id} cleared!")
+                self.ghosts.pop(entity_id)
 
     # @property
     # def ghosts(self):
@@ -139,4 +151,4 @@ class NavigationStep(BaseModel):
 
     def __str__(self):
         """Print easier to read string"""
-        return f"{self.direction} until ({self.xy})"
+        return f"{self.direction} until {self.xy}"
