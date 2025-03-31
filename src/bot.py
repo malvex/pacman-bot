@@ -11,22 +11,24 @@ l = getLogger(__name__)
 
 
 class Bot:
-    def __init__(self, game_state: GameState, debug: bool = True):
-        # game components
-        self.game_state = game_state
-        self.debug = debug
+    def __init__(self, enable_navigation: bool = True):
+        self.enable_navigation = enable_navigation
+
+        # data for bot operation
+        self.current_action: BotAction = None
+        self.current_navigation: list[NavigationStep] = []
+        self.last_decision_time: float = 0.0
 
         # bot actions
-        self.last_key = None
+        self.last_pressed_key = None
         self.last_move_time = 0
         self.move_cooldown = 0.1  # seconds between key changes
 
-        self.current_action: BotAction = None
-        self.current_navigation: list[NavigationStep] = []
-        self.next_action_time: float = 0.0
-
-    def iterate(self) -> None:
-        game_state = self.game_state
+    def iterate(self, game_state: GameState) -> None:
+        """
+        Evaluate current game state and decide action based on that.
+        Todo: This should be split to smaller parts.
+        """
 
         # if we dont see pacman then dont do anything (e.g. dead pacman, game in menu, or not loaded)
         if not game_state.pacman:
@@ -41,48 +43,74 @@ class Bot:
         if current_time - self.last_move_time < self.move_cooldown:
             return
 
-        # todo - state machine
+        next_best_action = self.choose_best_action(game_state)
 
-        game_state.bot_action = self.choose_best_action(game_state)
+        self.current_action = next_best_action
 
-        # if we should run away then interrupt everything we are doing
-        if game_state.bot_action.action_type != BotActionType.RUN_AWAY:
-            # we have currently set navigation
-            while self.current_navigation:
+        l.info(f"next_best_action: {next_best_action.action_type}")
+
+        # pathfinding navigation
+        if self.current_navigation:
+            # if we should be running away then interrupt navigation
+            if self.current_action.action_type == BotActionType.RUN_AWAY:
+                l.info("Getting chased, resetting navigation")
+                self.current_navigation = []  # interrupt navigation
+                reason = " getting chased (navigation interrupted)"
+                return self.execute_action(self.current_navigation[0].direction, reason)
+
+            # if stuck during navigating, then reset navigation (temp, before bugs resolved)
+            if game_state.stuck >= 5:
+                l.warning("Stuck during navigation, resetting navigation steps")
+                self.current_navigation = []
+                reason = " stuck during navigation (navigation reset)"
+                return self.execute_action(self.current_navigation[0].direction, reason)
+
+            __endless_loop_protection = 0
+            while self.current_navigation and __endless_loop_protection < 20:
+                __endless_loop_protection += 1
                 next_point = self.current_navigation[0].model_copy()
                 next_point.x = int(next_point.x * 2)
                 next_point.y = int(next_point.y * 2)
 
-                l.info(f"pacman = {game_state.pacman.xy} next_point = {next_point.xy}")
                 if game_state.pacman.distance_to(next_point) < 250:
                     l.info(f"point ({str(next_point)}) reached! pacman = {game_state.pacman.xy}")
                     self.current_navigation.pop(0)
                     continue
                 else:
-                    return self.execute_action((next_point.direction,)*3)
+                    reason = f"{self.current_action.action_type.name} (navigating)"
+                    return self.execute_action(next_point.direction, reason)
 
-        self.current_navigation = []
+        if self.current_action.action_type != BotActionType.RUN_AWAY \
+            and self.enable_navigation \
+            and self.current_action.target \
+            and game_state.pacman.distance_to(self.current_action.target) > 250:
+            # no navigation yet, lets try pathfinding, but only if we arent chased
+            found_path = get_path_actions(game_state.walls_mapper.map, game_state.pacman, self.current_action)
 
-        found_path = get_path_actions(game_state.walls_mapper.map, game_state.pacman, game_state.bot_action)
+            if found_path:
+                l.info(f"Found path to {self.current_action.target.class_name}!")
 
-        if found_path:
-            if not game_state.bot_pathfinding:
-                l.info("Pathfinding successful!")
-                game_state.bot_pathfinding = True
+                pxy = game_state.pacman.scaled_xy(game_state.walls_mapper.map.grid_resolution_px)
+                self.current_navigation = generate_path_navigation(pxy, found_path)
 
-            navigation_steps = generate_path_navigation(game_state.pacman.scaled_xy(game_state.walls_mapper.map.grid_resolution_px), found_path)
-            #print(f"PATH: {str(found_path)}")
-            print(f"NAVIGATION: {[str(step) for step in navigation_steps]}")
-            self.game_state.bot_navigation = navigation_steps
-            self.current_navigation = navigation_steps
+                reason = f"{self.current_action.action_type.name} (new navigation)"
+                return self.execute_action(self.current_navigation[0].direction, reason)
 
-            #self.execute_action(pathfinding_actions)
-            self.execute_action(game_state.bot_action.action_key)
+        # no path found, just do classical walk
         else:
-            self.game_state.bot_navigation = []
-            self.execute_action(game_state.bot_action.action_key)
+            primary, secondary, tertiary = self.current_action.action_key
 
-    def choose_best_action(self, game_state: GameState) -> str:
+            if game_state.stuck < 2:
+                action = primary
+            elif game_state.stuck < 5:
+                action = secondary
+            else:
+                action = tertiary
+
+            reason = f"{self.current_action.action_type.name}[{game_state.stuck}]"
+            self.execute_action(action, reason)
+
+    def choose_best_action(self, game_state: GameState) -> BotAction:
         """decide the best action to take"""
 
         pacman = game_state.pacman
@@ -107,37 +135,19 @@ class Bot:
         if closest_berry:
             return self.eat(pacman, closest_berry)
 
+        # default action
         return self.wander()
 
-    def execute_action(self, action: tuple[str]) -> None:
+    def execute_action(self, action: str, reason: str = None) -> None:
         # execute the action
 
-        stuck_counter = self.game_state.stuck
+        if action != self.last_pressed_key or True:  # todo - temp bypass
 
-        if stuck_counter > 3 and self.current_navigation:
-            self.current_navigation = []
-            return
-
-        primary, secondary, tertiary = action
-
-        if stuck_counter == 0:
-            action = primary
-        elif stuck_counter < 2:
-            action = secondary
-        else:
-            action = tertiary
-
-        self.game_state.bot_move = action
-
-        if action != self.last_key or True:  # temp bypass
-
-            self.last_key = action
+            self.last_pressed_key = action
             self.last_move_time = time()
 
-            # if self.debug:
-            #     pass
-            #     #print(f"Would press {action} (debug mode on)")
-            # else:
+            reason_s = "" if not reason else f" - reason: {reason}"
+            print(f"pressed {action}{reason_s}")
             press_key(action)
 
     ###########

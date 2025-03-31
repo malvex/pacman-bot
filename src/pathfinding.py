@@ -1,4 +1,4 @@
-from helper import calculate_distance_better, direction_to
+from helper import calculate_distance, direction_to
 from models import Map, Entity, BotAction, BotActionType, NavigationStep
 import logging
 
@@ -9,6 +9,10 @@ def get_path_actions(map: Map, pacman: Entity, bot_action: BotAction):
     if not pacman or not bot_action or bot_action == BotActionType.WANDER or not bot_action.target:
         return False
 
+    if pacman.distance_to(bot_action.target) < 100:
+        l.warning("too close to target, skipping path finding")
+        return False
+
     l.debug("Trying to calculate path...")
 
     p = pacman.scaled_xy(map.grid_resolution_px)
@@ -16,7 +20,7 @@ def get_path_actions(map: Map, pacman: Entity, bot_action: BotAction):
 
     #l.info(f"\nMAP_SIZE: {map.data.shape} | PACMAN: {p} | TARGET: {t}")
 
-    return find_path(map.data, p, t, step_size=5)
+    return find_path(map.data, p, t, step_size=15)
 
 def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: int = 1) -> list:
     """
@@ -28,7 +32,7 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
     pacman_loc = (pacman_loc[1], pacman_loc[0])
     target_loc = (target_loc[1], target_loc[0])
 
-    max_iter = 5000
+    max_iter = 500
 
     i = 0
     explored_points = []
@@ -43,12 +47,12 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
         loc = path[-1]  # get last path point
 
         # calculate distance to make sure we don't "overshoot"
-        if calculate_distance_better(loc, target_loc) < step_size:
+        if calculate_distance(loc, target_loc) < step_size:
             l.warning(f"FOUND, BUT {len(possible_paths)} PATHS LEFT TO CHECK")
+            path.pop(0)  # remove point of origin (already reached point)
+            path.append(target_loc)  # append target point
             # flip xy on each step again
-            path = [(p[1], p[0]) for p in path]
-            return path
-            #if not shortest_path_found:
+            return [(p[1], p[0]) for p in path]
 
         # if the current point was already explored then we disregard it
         if loc in explored_points:
@@ -94,10 +98,6 @@ def generate_path_navigation(origin: list[tuple[int]], path: list[tuple[int]]):
 
     while path:
         next_point = path.pop(0)
-
-        if not previous_point:
-            previous_point = next_point
-            continue
 
         # get the direction to the next point
         next_direction = direction_to(previous_point, next_point)[0]

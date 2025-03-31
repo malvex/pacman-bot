@@ -1,4 +1,4 @@
-from helper import calculate_closest_entity, calculate_distance_better
+from helper import calculate_closest_entity, calculate_distance
 from walls_mapper import WallsMapper
 from models import Memory, Prediction, Entity, EntityClass, BotAction, NavigationStep
 from minimap import draw_map
@@ -29,11 +29,6 @@ class GameState:
         # debugging
         self.debug = debug
         self.frame = 0
-        self.last_debug_time = time()
-        self.bot_action: BotAction = None
-        self.bot_move: str = "-"
-        self.bot_pathfinding = False
-        self.bot_navigation: list[NavigationStep] = []
 
         self.memory = Memory()
         self.stuck = 0
@@ -41,8 +36,6 @@ class GameState:
     def update(self, predictions: list[Prediction]) -> None:
         current_time = time()
         self.frame += 1
-
-        # todo - implement memory!
 
         # temp reset
         self.berries = []
@@ -91,7 +84,13 @@ class GameState:
             # handle ghost logic
             elif entity.is_ghost:
                 self.ghosts[entity.entity_id] = entity
-                self.memory.ghosts[entity.entity_id] = entity
+
+                if self.previous_pacman and self.previous_pacman.distance_to(entity) < 100:
+                    # if we are too close to a vulnerable ghost, clean it up from memory (was eaten)
+                    if entity.entity_id in self.memory.ghosts and entity_id.startswith("vuln"):
+                        self.memory.ghosts.pop(entity.entity_id)
+                else:
+                    self.memory.ghosts[entity.entity_id] = entity
 
                 # if we see vulnerable ghost that means power-up was taken
                 if not self.powered_up and entity.class_name == EntityClass.vulnerable_ghost:
@@ -117,21 +116,7 @@ class GameState:
         # check if power-up has expired
         if self.powered_up and current_time > self.power_up_end_time:
             self.powered_up = False
-
-        draw_map(self, self.walls_mapper.map, self.walls_mapper.entity_max_size_px, self.bot_action)
-
-        action_name = self.bot_action.action_type.name if self.bot_action else "(no action)"
-        power_timer = f" Power up! ({ self.power_up_end_time - time():.2f})" if self.powered_up else ""
-
-        print(f"P/G/P/B: {self.pacman is not None}/{len(self.ghosts)}/{len(self.buffs)}/{len(self.berries)}"
-            + f" | Stuck: {self.stuck} | {action_name} ({self.bot_move}) {power_timer}"
-            + " " * 20, end="\r")
-
-        if self.debug and False:
-            # print debug info every second
-            if current_time - self.last_debug_time >= 1:
-                self.print_debug_info()
-                self.last_debug_time = current_time
+            self.memory.ghosts = {}
 
     def activate_power_up(self) -> None:
         self.powered_up = True
@@ -142,28 +127,29 @@ class GameState:
     def check_if_stuck(self) -> int:
         """Check if pacman is stuck (not moving)."""
 
-        dist = calculate_distance_better(self.pacman.xy, self.previous_pacman.xy)
+        dist = calculate_distance(self.pacman.xy, self.previous_pacman.xy)
         l.debug("Pacman distance travelled: %s", dist)
 
-        if dist < 3:
+        # reset stuck counter to not get stuck on alternative direction
+        if dist < 3 and self.stuck < 7:
             self.stuck += 1
         else:
             self.stuck = 0
 
         return self.stuck
 
-    def print_debug_info(self) -> None:
-        print(f"\n--- Frame {self.frame} ---")
-        print(f"Pacman detected: {self.pacman is not None}")
-        print(f"Ghosts detected: {len(self.ghosts)}")
-        print(f"Berries detected: {len(self.berries)}")
-        print(f"Buffs detected: {len(self.buffs)}")
-        print(f"Powered up: {self.powered_up}")
-        print(f"Stuck: {self.stuck}")
+    # def print_debug_info(self) -> None:
+    #     print(f"\n--- Frame {self.frame} ---")
+    #     print(f"Pacman detected: {self.pacman is not None}")
+    #     print(f"Ghosts detected: {len(self.ghosts)}")
+    #     print(f"Berries detected: {len(self.berries)}")
+    #     print(f"Buffs detected: {len(self.buffs)}")
+    #     print(f"Powered up: {self.powered_up}")
+    #     print(f"Stuck: {self.stuck}")
 
-        # calculate closest ghost
-        closest_ghost = calculate_closest_entity(self.pacman, list(self.ghosts.values()))
+    #     # calculate closest ghost
+    #     closest_ghost = calculate_closest_entity(self.pacman, list(self.ghosts.values()))
 
-        if self.pacman and closest_ghost:
-            distance = calculate_distance_better(self.pacman.xy, closest_ghost.xy)
-            print(f"Distance to closest ghost: {distance:.2f}")
+    #     if self.pacman and closest_ghost:
+    #         distance = calculate_distance(self.pacman.xy, closest_ghost.xy)
+    #         print(f"Distance to closest ghost: {distance:.2f}")

@@ -3,6 +3,7 @@ from inference import InferencePipeline
 from game_state import GameState
 from walls_mapper import WallsMapper
 from bot import Bot
+from minimap import draw_map
 
 import config
 import logging
@@ -33,7 +34,20 @@ def my_sink(result, video_frame):
         game_state.update(result["predictions"]["predictions"])
 
         # take action based on the game state
-        bot.iterate()
+        bot.iterate(game_state)
+
+        # draw minimap window
+        draw_map(game_state, walls_mapper.map, walls_mapper.entity_max_size_px, bot.current_action, bot.current_navigation)
+
+        # report current action
+        # self.
+        # action_name = self.bot_action.action_type.name if self.bot_action else "(no action)"
+        # power_timer = f" Power up! ({ self.power_up_end_time - time():.2f})" if self.powered_up else ""
+
+        # print(f"P/G/P/B: {self.pacman is not None}/{len(self.ghosts)}/{len(self.buffs)}/{len(self.berries)}"
+        #     + f" | Stuck: {self.stuck} | {action_name} ({self.bot_move}) {power_timer}"
+        #     + " " * 20, end="\r")
+
 
 
 def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = InputDevice.OBS) -> None:
@@ -43,7 +57,7 @@ def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = 
         workspace_name=workspace_name,
         workflow_id=workflow_id,
         video_reference=device_id,
-        max_fps=30,
+        max_fps=15,
         on_prediction=my_sink,
         serialize_results=True
     )
@@ -55,7 +69,7 @@ def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = 
 if __name__ == "__main__":
     walls_mapper = WallsMapper()
     game_state = GameState(walls_mapper, debug=config.DEBUG)
-    bot = Bot(game_state, debug=config.DEBUG)
+    bot = Bot(debug=config.DEBUG)
 
     logging.info("Starting...")
     start(config.WORKSPACE_NAME, config.API_KEY, config.WORKFLOW_ID)

@@ -8,7 +8,7 @@
 #         print(e1, e2)
 #         raise e
 
-def calculate_distance_better(x: tuple, y: tuple) -> float:
+def calculate_distance(x: tuple, y: tuple) -> float:
     return ((x[0] - y[0]) ** 2 + (x[1] - y[1]) ** 2) ** 0.5
 
 
@@ -16,7 +16,7 @@ def calculate_closest_entity(pacman, entity_list: list):
     if not pacman or not entity_list:
         return None
 
-    return min(entity_list, key=lambda entity: calculate_distance_better(pacman.xy, entity.xy), default=None)
+    return min(entity_list, key=lambda entity: calculate_distance(pacman.xy, entity.xy), default=None)
 
 
 def direction_to(pacman: tuple, target: tuple) -> tuple[str]:

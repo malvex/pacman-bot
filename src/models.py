@@ -1,4 +1,4 @@
-from helper import calculate_distance_better, direction_to
+from helper import calculate_distance, direction_to
 
 from typing import Literal
 from enum import Enum
@@ -95,7 +95,7 @@ class Entity(BaseModel):
         return __class__.model_validate(data_mapping)
 
     def distance_to(self, target_entity) -> float:
-        return calculate_distance_better(self.xy, target_entity.xy)
+        return calculate_distance(self.xy, target_entity.xy)
 
     def direction_to(self, target) -> tuple[str]:
         return direction_to(self.xy, target.xy)

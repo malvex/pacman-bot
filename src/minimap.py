@@ -52,7 +52,7 @@ def draw_pathfinding_navigation(img, pacman: Entity, resolution: int, steps: lis
     return img
 
 
-def draw_map(game_state, map: Map, entity_max_size_px: int, bot_action: BotAction):
+def draw_map(game_state, map: Map, entity_max_size_px: int, bot_action: BotAction, bot_navigation: list[NavigationStep]):
 
     resolution = map.grid_resolution_px
 
@@ -100,8 +100,8 @@ def draw_map(game_state, map: Map, entity_max_size_px: int, bot_action: BotActio
     frame = draw_bot_action_line(frame, resolution, game_state.pacman, bot_action)
 
     # draw pathfinding directions
-    if game_state.bot_navigation:
-        draw_pathfinding_navigation(frame, game_state.pacman, resolution, game_state.bot_navigation)
+    if bot_navigation:
+        draw_pathfinding_navigation(frame, game_state.pacman, resolution, bot_navigation)
 
     resized_frame = cv2.resize(frame, (map.width * resolution, map.height * resolution),
                        interpolation=cv2.INTER_NEAREST)

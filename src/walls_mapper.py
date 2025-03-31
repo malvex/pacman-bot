@@ -5,7 +5,7 @@ This component maps the environment based on Pacman getting stuck against the wa
 and watching path that ghosts take.
 I could just OCR walls, but this seems like a fun idea to implement.
 """
-from helper import calculate_distance_better
+from helper import calculate_distance
 from models import Map, Entity
 
 from logging import getLogger
@@ -45,7 +45,7 @@ class WallsMapper:
         recent_loc = self.recent_location.get(entity.entity_id, None)
 
         # store point only if entity moved more than min_distance_px (5px) to prevent storing too often
-        if not recent_loc or calculate_distance_better(entity.xy, recent_loc) > self.min_distance_px:
+        if not recent_loc or calculate_distance(entity.xy, recent_loc) > self.min_distance_px:
             self.recent_location[entity.entity_id] = entity.xy
 
             grid_resolution_px = self.map.grid_resolution_px
