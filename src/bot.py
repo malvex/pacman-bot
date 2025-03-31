@@ -41,10 +41,15 @@ class Bot:
         # if current_time > self.next_action_time:
         #     self.next_action_time = current_time + 0.1
 
-        # if current_time - self.last_move_time < self.move_cooldown:
-        #     return
+        if current_time - self.last_move_time < self.move_cooldown:
+            return
 
         next_best_action = self.choose_best_action(game_state)
+
+        # reset navigation if we changed our objective
+        if self.current_action and self.current_action.action_type != next_best_action.action_type:
+            l.info("Objective changed, reseting navigation")
+            self.current_navigation = []
 
         self.current_action = next_best_action
 
@@ -74,7 +79,7 @@ class Bot:
                 next_point.x = int(next_point.x * 2)
                 next_point.y = int(next_point.y * 2)
 
-                if game_state.pacman.distance_to(next_point) < 100:
+                if game_state.pacman.distance_to(next_point) < 150:
                     l.info(f"point ({str(next_point)}) reached! pacman = {game_state.pacman.xy}")
                     self.current_navigation.pop(0)
                     continue

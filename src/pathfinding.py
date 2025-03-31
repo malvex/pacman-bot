@@ -104,7 +104,7 @@ def generate_path_navigation(origin: tuple[int], path: list[tuple[int]]) -> list
             steps.append(NavigationStep(
                 x=next_point[0],
                 y=next_point[1],
-                direction=next_direction
+                direction=previous_direction or next_direction
             ))
             previous_direction = next_direction
 
