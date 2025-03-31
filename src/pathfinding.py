@@ -48,9 +48,9 @@ def find_path(array, pacman_loc: tuple[int], target_loc: tuple[int], step_size: 
 
         # calculate distance to make sure we don't "overshoot"
         if calculate_distance(loc, target_loc) < step_size:
-            l.warning(f"FOUND, BUT {len(possible_paths)} PATHS LEFT TO CHECK")
+            l.debug(f"FOUND, BUT {len(possible_paths)} PATHS LEFT TO CHECK")
             path.pop(0)  # remove point of origin (already reached point)
-            path.append(target_loc)  # append target point
+            #path.append(target_loc)  # append target point
             # flip xy on each step again
             return [(p[1], p[0]) for p in path]
 

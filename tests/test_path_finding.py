@@ -22,14 +22,13 @@ def test_pathfinding(small_map: Map):
 
     found_path = find_path(small_map.data, pacman_loc, target_loc)
 
-    assert found_path == [(8, 8), (8, 7), (8, 6), (8, 5), (8, 4), (8, 3),
-                          (8, 2), (7, 2), (6, 2), (5, 2), (4, 2), (3, 2),
-                          (2, 2)]
+    assert found_path == [(8, 7), (8, 6), (8, 5), (8, 4), (8, 3), (8, 2),
+                          (7, 2), (6, 2), (5, 2), (4, 2), (3, 2), (2, 2)]
 
     target_loc = (8, 5)
     found_path = find_path(small_map.data, pacman_loc, target_loc)
-    assert found_path == [(8, 8), (8, 7), (8, 6), (8, 5)]
+    assert found_path == [(8, 7), (8, 6), (8, 5)]
 
     target_loc = (10, 10)
     found_path = find_path(small_map.data, pacman_loc, target_loc)
-    assert found_path is None
+    assert found_path is False
