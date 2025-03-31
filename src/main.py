@@ -7,6 +7,7 @@ from minimap import draw_map
 
 import config
 import logging
+import argparse
 
 
 # setup logging
@@ -57,7 +58,7 @@ def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = 
         workspace_name=workspace_name,
         workflow_id=workflow_id,
         video_reference=device_id,
-        max_fps=15,
+        max_fps=30,
         on_prediction=my_sink,
         serialize_results=True
     )
@@ -67,9 +68,14 @@ def start(workspace_name: str, api_key: str, workflow_id: str, device_id: int = 
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--debug", help="Enable debug mode", action="store_true")
+    parser.add_argument("--disable-pathfinding", help="Disable pathfinding", action="store_true")
+    args = parser.parse_args()
+
     walls_mapper = WallsMapper()
     game_state = GameState(walls_mapper, debug=config.DEBUG)
-    bot = Bot(debug=config.DEBUG)
+    bot = Bot(enable_navigation=not args.disable_pathfinding)
 
     logging.info("Starting...")
     start(config.WORKSPACE_NAME, config.API_KEY, config.WORKFLOW_ID)

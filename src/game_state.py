@@ -8,7 +8,7 @@ from logging import getLogger
 
 l = getLogger(__name__)
 
-POWER_UP_DURATION = 7  # seconds
+POWER_UP_DURATION = 9  # seconds
 
 
 class GameState:
@@ -85,10 +85,11 @@ class GameState:
             elif entity.is_ghost:
                 self.ghosts[entity.entity_id] = entity
 
-                if self.previous_pacman and self.previous_pacman.distance_to(entity) < 100:
-                    # if we are too close to a vulnerable ghost, clean it up from memory (was eaten)
-                    if entity.entity_id in self.memory.ghosts and entity_id.startswith("vuln"):
-                        self.memory.ghosts.pop(entity.entity_id)
+                # if we are too close to a vulnerable ghost, clean it up from memory (was eaten)
+                if self.previous_pacman and self.previous_pacman.distance_to(entity) < 100 and entity_id.startswith("vuln"):
+                    for _ghost_id in list(self.memory.ghosts.keys()):
+                        if _ghost_id.startswith("vulner"):
+                            self.memory.ghosts.pop(_ghost_id)
                 else:
                     self.memory.ghosts[entity.entity_id] = entity
 
@@ -131,8 +132,9 @@ class GameState:
         l.debug("Pacman distance travelled: %s", dist)
 
         # reset stuck counter to not get stuck on alternative direction
-        if dist < 3 and self.stuck < 7:
+        if dist < 3 and self.stuck < 10:
             self.stuck += 1
+            l.info(f"Stuck! ({self.stuck})")
         else:
             self.stuck = 0
 
